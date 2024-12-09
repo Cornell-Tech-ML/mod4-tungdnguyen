@@ -6,6 +6,7 @@ from typing import Any, Iterable, Optional, Sequence, Tuple, Type, Union
 import numpy as np
 
 from dataclasses import field
+
 from .autodiff import Context, Variable, backpropagate, central_difference
 from .scalar_functions import (
     EQ,
@@ -86,10 +87,44 @@ class Scalar:
         return bool(self.data)
 
     def __radd__(self, b: ScalarLike) -> Scalar:
-        return self + b
+        return Add.apply(self, b)
 
     def __rmul__(self, b: ScalarLike) -> Scalar:
-        return self * b
+        return Mul.apply(self, b)
+
+    def __eq__(self, b: ScalarLike) -> Scalar:  # type: ignore
+        return EQ.apply(self, b)
+
+    def __lt__(self, b: ScalarLike) -> Scalar:
+        return LT.apply(self, b)
+
+    def __gt__(self, b: ScalarLike) -> Scalar:
+        return LT.apply(b, self)
+
+    def __add__(self, b: ScalarLike) -> Scalar:
+        return Add.apply(self, b)
+
+    def __neg__(self) -> Scalar:
+        return Neg.apply(self)
+
+    def __sub__(self, b: ScalarLike) -> Scalar:
+        return Add.apply(self, -b)
+
+    def log(self) -> Scalar:
+        """Returns log of the current Scalar"""
+        return Log.apply(self)
+
+    def exp(self) -> Scalar:
+        """Returns exp of the current Scalar"""
+        return Exp.apply(self)
+
+    def sigmoid(self) -> Scalar:
+        """Returns sigmoid of the current Scalar"""
+        return Sigmoid.apply(self)
+
+    def relu(self) -> Scalar:
+        """Returns ReLU of the current Scalar"""
+        return ReLU.apply(self)
 
     # Variable elements for backprop
 
@@ -112,21 +147,44 @@ class Scalar:
         return self.history is not None and self.history.last_fn is None
 
     def is_constant(self) -> bool:
+        """Is the scalar a constant"""
         return self.history is None
 
     @property
     def parents(self) -> Iterable[Variable]:
-        """Get the variables used to create this one."""
+        """Returns the input variables of this Scalar."""
         assert self.history is not None
         return self.history.inputs
 
     def chain_rule(self, d_output: Any) -> Iterable[Tuple[Variable, Any]]:
+        """Calculates the gradients of an output with respect to each of
+        the input Variables. Ignores Constant
+
+        Args:
+        ----
+            d_output (Any): d_output constant for backward pass.
+
+        Returns:
+        -------
+            Iterable[Tuple[Variable, Any]]: Iterable of (variable, gradient) pairs.
+
+        """
         h = self.history
         assert h is not None
+        # Do not calculate chain rule on leaf node.
         assert h.last_fn is not None
         assert h.ctx is not None
 
-        raise NotImplementedError("Need to include this file from past assignment.")
+        # Compute gradients for all input Variables.
+        grads = h.last_fn._backward(h.ctx, d_output)
+        chain_rule_output = []
+        for input, grad in zip(h.inputs, grads):
+            # Returns empty tuple if input is Constant.
+            if input.is_constant():
+                chain_rule_output.append((input, 0.0))
+            else:
+                chain_rule_output.append((input, grad))
+        return chain_rule_output
 
     def backward(self, d_output: Optional[float] = None) -> None:
         """Calls autodiff to fill in the derivatives for the history of this object.
@@ -141,15 +199,13 @@ class Scalar:
             d_output = 1.0
         backpropagate(self, d_output)
 
-    raise NotImplementedError("Need to include this file from past assignment.")
-
 
 def derivative_check(f: Any, *scalars: Scalar) -> None:
     """Checks that autodiff works on a python function.
     Asserts False if derivative is incorrect.
 
-    Parameters
-    ----------
+    Args:
+    ----
         f : function from n-scalars to 1-scalar.
         *scalars  : n input scalar values.
 
@@ -161,6 +217,7 @@ def derivative_check(f: Any, *scalars: Scalar) -> None:
 Derivative check at arguments f(%s) and received derivative f'=%f for argument %d,
 but was expecting derivative f'=%f from central difference."""
     for i, x in enumerate(scalars):
+        print("scalars for central difference", scalars, i)
         check = central_difference(f, *scalars, arg=i)
         print(str([x.data for x in scalars]), x.derivative, i, check)
         assert x.derivative is not None
