@@ -376,7 +376,7 @@ def tensor_reduce(
         a_strides: Strides,
         reduce_dim: int,
     ) -> None:
-        out_index: Index = np.zeros(MAX_DIMS, dtype=np.int32)
+        out_index = np.array([0] * len(out_shape), dtype=np.int32)
         a_index: Index = np.zeros(MAX_DIMS, dtype=np.int32)
         for i in range(len(out)):
             out_shape[reduce_dim] = 1
