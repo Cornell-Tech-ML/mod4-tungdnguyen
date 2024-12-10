@@ -33,13 +33,29 @@ def test_avg(t: Tensor) -> None:
 def test_max(t: Tensor) -> None:
     # Implemented for Task 4.4.
 
+    # Test max reduction along dim 0
+    out = minitorch.nn.max(t, 0)
+    assert_close(out[0, 0, 0], max([t[i, 0, 0] for i in range(2)]))
+    assert out.shape == (1,3, 4)
+
+    # Test max reduction along dim 1
+    out = minitorch.nn.max(t, 1)
+    assert_close(out[0, 0, 0], max([t[0, i, 0] for i in range(3)]))
+    assert out.shape == (2,1, 4)
+
+    # Test max reduction along dim 2
+    out = minitorch.nn.max(t, 2)
+    assert_close(out[0, 0, 0], max([t[0, 0, i] for i in range(4)]))
+    assert out.shape == (2, 3, 1)
+
+    # Check that gradients are computed correctly
+    minitorch.grad_check(lambda t: minitorch.nn.max(t, 1), t)
+
 
 @pytest.mark.task4_4
 @given(tensors(shape=(1, 1, 4, 4)))
 def test_max_pool(t: Tensor) -> None:
     out = minitorch.maxpool2d(t, (2, 2))
-    print(out)
-    print(t)
     assert_close(
         out[0, 0, 0, 0], max([t[0, 0, i, j] for i in range(2) for j in range(2)])
     )
