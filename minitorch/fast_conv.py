@@ -22,6 +22,7 @@ Fn = TypeVar("Fn")
 
 
 def njit(fn: Fn, **kwargs: Any) -> Fn:
+    """Jit a function for parallel execution"""
     return _njit(inline="always", **kwargs)(fn)  # type: ignore
 
 
@@ -101,17 +102,13 @@ def _tensor_conv1d(
             for kernel_pos in range(kw):
                 # Calculate weight offset based on reverse flag
                 w_offset = kernel_pos if not reverse else (kw - 1 - kernel_pos)
-                
+
                 # Get position in weight tensor
-                w_pos = (
-                    cur_out_channel * s2[0] 
-                    + channel_pos * s2[1]
-                    + w_offset * s2[2]
-                )
+                w_pos = cur_out_channel * s2[0] + channel_pos * s2[1] + w_offset * s2[2]
 
                 # Calculate input width position
                 in_width_pos = (
-                    cur_out_width + w_offset 
+                    cur_out_width + w_offset
                     if not reverse
                     else cur_out_width - w_offset
                 )
@@ -121,7 +118,7 @@ def _tensor_conv1d(
                     # Get position in input tensor
                     in_pos = (
                         cur_out_batch * s1[0]
-                        + channel_pos * s1[1] 
+                        + channel_pos * s1[1]
                         + in_width_pos * s1[2]
                     )
                     # Multiply and accumulate
@@ -130,6 +127,7 @@ def _tensor_conv1d(
 
 
 tensor_conv1d = njit(_tensor_conv1d, parallel=True)
+
 
 class Conv1dFun(Function):
     @staticmethod
@@ -164,10 +162,12 @@ class Conv1dFun(Function):
         """Computes backward pass of 1D convolution.
 
         Args:
+        ----
             ctx: Context containing saved tensors
             grad_output: Gradient of the output
 
         Returns:
+        -------
             Tuple of gradients for input and weight
 
         """
@@ -275,8 +275,12 @@ def _tensor_conv2d(
         for channel_pos in range(in_channels):
             for kernel_h_pos in range(kh):
                 for kernel_w_pos in range(kw):
-                    weight_h_offset = kernel_h_pos if not reverse else (kh - 1 - kernel_h_pos)
-                    weight_w_offset = kernel_w_pos if not reverse else (kw - 1 - kernel_w_pos)
+                    weight_h_offset = (
+                        kernel_h_pos if not reverse else (kh - 1 - kernel_h_pos)
+                    )
+                    weight_w_offset = (
+                        kernel_w_pos if not reverse else (kw - 1 - kernel_w_pos)
+                    )
 
                     # Get position in weight tensor
                     w_pos = (
@@ -299,7 +303,12 @@ def _tensor_conv2d(
                     )
 
                     # Only accumulate if position is valid
-                    if in_width_pos >= 0 and in_width_pos < width and in_height_pos >= 0 and in_height_pos < height:
+                    if (
+                        in_width_pos >= 0
+                        and in_width_pos < width
+                        and in_height_pos >= 0
+                        and in_height_pos < height
+                    ):
                         # Get position in input tensor
                         in_pos = (
                             cur_out_batch * s10
@@ -307,9 +316,7 @@ def _tensor_conv2d(
                             + in_height_pos * s12
                             + in_width_pos * s13
                         )
-                        accumulator += (
-                            input[in_pos] * weight[w_pos]
-                        )
+                        accumulator += input[in_pos] * weight[w_pos]
         out[out_pos] = accumulator
 
 
@@ -347,10 +354,12 @@ class Conv2dFun(Function):
         """Computes backward pass of 2D convolution.
 
         Args:
+        ----
             ctx: Context containing saved tensors
             grad_output: Gradient of the output
 
         Returns:
+        -------
             Tuple of gradients for input and weight
 
         """

@@ -114,12 +114,7 @@ class All(Function):
         if dim is not None:
             return a.f.mul_reduce(a, int(dim.item()))
         else:
-            return a.f.mul_reduce(
-                a.contiguous().view(
-                    minitorch.Tensor.make([-1], (1,), backend=a.backend)
-                ),
-                0,
-            )
+            return a.f.mul_reduce(a.contiguous().view(int(operators.prod(a.shape))), 0)
 
 
 class Mul(Function):
