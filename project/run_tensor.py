@@ -11,6 +11,45 @@ def RParam(*shape):
     r = 2 * (minitorch.rand(shape) - 0.5)
     return minitorch.Parameter(r)
 
+class Network(minitorch.Module):
+    def __init__(self, hidden_layers):
+        super().__init__()
+        # Submodules
+        self.layer1 = Linear(2, hidden_layers)
+        self.layer2 = Linear(hidden_layers, hidden_layers)
+        self.layer3 = Linear(hidden_layers, 1)
+
+    def forward(self, x: RParam):
+        middle = self.layer1.forward(x).relu()
+        end = self.layer1.forward(x).relu()
+        return self.layer3.forward(end).sigmoid()
+
+
+class Linear(minitorch.Module):
+    def __init__(self, in_size, out_size):
+        super().__init__()
+        self.weights = RParam(in_size, out_size)
+        self.bias = RParam(out_size)
+        self.out_size = out_size
+
+    def forward(self, inputs: RParam) -> RParam:
+        """Forward pass for Linear module.
+        This will have multiple (output_size) outputs corresponding to multiple set of weights.
+
+        Args:
+        ----
+            inputs: Matrix of inputs of size in_size
+
+        Returns:
+        -------
+            List of outputs of size out_size, each output is the linear function of inputs with a different set of weights and bias.
+
+        """
+        inputs = inputs.view(*inputs.shape, 1)
+        weights = self.weights.value.view(1, *self.weights.value.shape)
+        bias = self.bias.value.view(1, *self.bias.value.shape)
+        return (inputs * weights).sum(1).view(inputs.shape[0], self.out_size) + bias
+
 
 def default_log_fn(epoch, total_loss, correct, losses):
     print("Epoch ", epoch, " loss ", total_loss, "correct", correct)
@@ -63,7 +102,7 @@ class TensorTrain:
 
 if __name__ == "__main__":
     PTS = 50
-    HIDDEN = 2
+    HIDDEN = 5
     RATE = 0.5
     data = minitorch.datasets["Simple"](PTS)
     TensorTrain(HIDDEN).train(data, RATE)
