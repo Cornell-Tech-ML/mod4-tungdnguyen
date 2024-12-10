@@ -49,7 +49,9 @@ def test_max(t: Tensor) -> None:
     assert out.shape == (2, 3, 1)
 
     # Check that gradients are computed correctly
-    minitorch.grad_check(lambda t: minitorch.nn.max(t, 1), t + (minitorch.rand(t.shape) * 1e-4))
+    minitorch.grad_check(
+        lambda t: minitorch.nn.max(t, 1), t + (minitorch.rand(t.shape) * 1e-4)
+    )
 
 
 @pytest.mark.task4_4
