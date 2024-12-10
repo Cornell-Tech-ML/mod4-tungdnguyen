@@ -41,9 +41,7 @@ class Conv2d(minitorch.Module):
         self.bias = RParam(out_channels, 1, 1)
 
     def forward(self, input):
-        # TODO: Implement for Task 4.5.
-        raise NotImplementedError("Need to implement for Task 4.5")
-
+        return minitorch.conv2d(input, self.weights.value) + self.bias.value
 
 class Network(minitorch.Module):
     """
@@ -67,12 +65,25 @@ class Network(minitorch.Module):
         self.mid = None
         self.out = None
 
-        # TODO: Implement for Task 4.5.
-        raise NotImplementedError("Need to implement for Task 4.5")
+        # Define the layers based on the instructions above
+        self.conv1 = Conv2d(1, 4, 3, 3)
+        self.conv2 = Conv2d(4, 8, 3, 3)
+        self.fc1 = Linear(392, 64)
+        self.fc2 = Linear(64, C)
 
     def forward(self, x):
-        # TODO: Implement for Task 4.5.
-        raise NotImplementedError("Need to implement for Task 4.5")
+        x = self.conv1.forward(x).relu()
+        x = self.conv2.forward(x).relu()
+        self.mid = x
+        # Maxpooling
+        x = minitorch.nn.maxpool2d(x, (4, 4))
+        # Flatten the tensor to feed into the linear layer
+        x = x.view(BATCH, x.shape[1] * x.shape[2] * x.shape[3])
+        x = self.fc1.forward(x).relu()
+        self.out = x
+        x = minitorch.nn.dropout(x, 0.25, not self.training)
+        x = self.fc2.forward(x)
+        return minitorch.nn.logsoftmax(x, dim=1)
 
 
 def make_mnist(start, stop):
@@ -88,6 +99,8 @@ def make_mnist(start, stop):
 
 
 def default_log_fn(epoch, total_loss, correct, total, losses, model):
+    with open("mnist.txt", "a") as f:
+        f.write(f"Epoch {epoch} loss {total_loss} valid acc {correct}/{total}\n")
     print(f"Epoch {epoch} loss {total_loss} valid acc {correct}/{total}")
 
 

@@ -30,12 +30,18 @@ class Module:
         return list(m.values())
 
     def train(self) -> None:
-        """Set the mode of this module and all descendent modules to `train`."""
-        raise NotImplementedError("Need to include this file from past assignment.")
+        """Set the `training` flag of this and descendent to true."""
+        self.training = True
+        if len(self.modules()) > 0:
+            for module in self.modules():
+                module.train()
 
     def eval(self) -> None:
-        """Set the mode of this module and all descendent modules to `eval`."""
-        raise NotImplementedError("Need to include this file from past assignment.")
+        """Set the `training` flag of this and descendent to false."""
+        self.training = False
+        if len(self.modules()) > 0:
+            for module in self.modules():
+                module.eval()
 
     def named_parameters(self) -> Sequence[Tuple[str, Parameter]]:
         """Collect all the parameters of this module and its descendents.
@@ -45,11 +51,54 @@ class Module:
             The name and `Parameter` of each ancestor parameter.
 
         """
-        raise NotImplementedError("Need to include this file from past assignment.")
+
+        def add_submodules_params(
+            submodule: Module, prefix: str
+        ) -> Sequence[Tuple[str, Parameter]]:
+            """Add the parameters of the submodules to the named_params list.
+
+            Args:
+            ----
+                submodule: The submodules of the module.
+                prefix: The submodules prefix of the parameters.
+
+            Returns:
+            -------
+                The param list of the submodules.
+
+            """
+            params: Dict[str, Parameter] = submodule.__dict__["_parameters"]
+            submodules: Dict[str, Module] = submodule.__dict__["_modules"]
+            named_params: Sequence[Tuple[str, Parameter]] = []
+            for name, param in params.items():
+                named_params.append((f"{prefix}.{name}", param))
+            if len(submodules.items()) > 0:
+                for name, module in submodules.items():
+                    submodules_params = add_submodules_params(
+                        module, f"{prefix}.{name}"
+                    )
+                    named_params.extend(submodules_params)
+            return named_params
+
+        # Add the parameters of the current module
+        params: Dict[str, Parameter] = self.__dict__["_parameters"]
+        modules: Dict[str, Module] = self.__dict__["_modules"]
+        named_params: Sequence[Tuple[str, Parameter]] = []
+        for name, param in params.items():
+            named_params.append((name, param))
+        if len(modules.items()) > 0:
+            # Recursively add the parameters of the submodules.
+            for name, submodule in modules.items():
+                submodules_params = add_submodules_params(submodule, name)
+                named_params.extend(submodules_params)
+        return named_params
 
     def parameters(self) -> Sequence[Parameter]:
         """Enumerate over all the parameters of this module and its descendents."""
-        raise NotImplementedError("Need to include this file from past assignment.")
+        all_params: Sequence[Parameter] = []
+        for _, param in self.named_parameters():
+            all_params.append(param)
+        return all_params
 
     def add_parameter(self, k: str, v: Any) -> Parameter:
         """Manually add a parameter. Useful helper for scalar parameters.
@@ -85,6 +134,7 @@ class Module:
         return None
 
     def __call__(self, *args: Any, **kwargs: Any) -> Any:
+        """Invoke the module using the forward function."""
         return self.forward(*args, **kwargs)
 
     def __repr__(self) -> str:

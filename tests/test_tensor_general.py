@@ -165,6 +165,7 @@ if numba.cuda.is_available():
         s = b.sum()[0]
         b2 = minitorch.tensor(x, backend=shared["cuda"])
         out = b2.sum(0)
+        print("OUT IS ", out)
         assert_close(s, out[0])
 
     @pytest.mark.task3_3
@@ -174,6 +175,7 @@ if numba.cuda.is_available():
         s = b.sum()[0]
         b2 = minitorch.tensor(x, backend=shared["cuda"])
         out = b2.sum(0)
+        print("OUT IS ", out)
         assert_close(s, out[0])
 
     @pytest.mark.task3_3
@@ -306,7 +308,7 @@ if numba.cuda.is_available():
 
 
 @given(data())
-@settings(max_examples=25)
+@settings(max_examples=26)
 @pytest.mark.parametrize("fn", two_arg)
 @pytest.mark.parametrize("backend", backend_tests)
 def test_two_grad_broadcast(
